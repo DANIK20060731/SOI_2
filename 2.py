@@ -1,0 +1,121 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import shapiro, spearmanr, mannwhitneyu, kruskal, kendalltau, median_test
+import warnings
+warnings.filterwarnings('ignore')
+
+
+sns.set_style("whitegrid")
+plt.rcParams['font.size'] = 11
+plt.rcParams['axes.labelsize'] = 12
+plt.rcParams['axes.titlesize'] = 13
+
+#датасет
+data = {
+    'country': ['Сингапур', 'Япония', 'Республика Корея', 'Испания', 'Швейцария',
+                'Израиль', 'Люксембург', 'Италия', 'Швеция', 'Исландия',
+                'Норвегия', 'Мальта', 'Кипр', 'Нидерланды', 'Франция',
+                'Ирландия', 'Кувейт', 'Австрия', 'Дания', 'Канада',
+                'Австралия', 'Словения', 'Финляндия', 'Бельгия', 'Португалия',
+                'Греция', 'Новая Зеландия', 'Великобритания', 'США', 'Германия'],
+    'hale_2019': [73.80, 73.58, 72.50, 71.69, 71.53, 71.51, 71.46, 71.43, 71.41, 71.39,
+                  71.18, 71.16, 71.13, 71.08, 70.72, 70.48, 70.48, 70.44, 70.31, 70.30,
+                  70.26, 70.23, 70.19, 70.10, 70.06, 69.82, 69.74, 69.74, 69.44, 69.44],
+    'health_exp': [2725.4, 4431.3, 3177.0, 3124.5, 7179.1, 3089.2, 5891.0, 3891.2, 5433.8, 5234.1,
+                   6234.5, 2456.3, 2134.7, 5123.4, 5234.0, 4567.8, 1876.2, 4789.3, 5678.9, 4987.6,
+                   4234.1, 2345.6, 4123.4, 4567.2, 2789.4, 1987.3, 3456.7, 4321.0, 10921.0, 6645.1],
+    'region': ['WPRO', 'WPRO', 'WPRO', 'EURO', 'EURO', 'EURO', 'EURO', 'EURO', 'EURO', 'EURO',
+               'EURO', 'EURO', 'EURO', 'EURO', 'EURO', 'EURO', 'EMRO', 'EURO', 'EURO', 'AMRO',
+               'WPRO', 'EURO', 'EURO', 'EURO', 'EURO', 'EURO', 'WPRO', 'EURO', 'AMRO', 'EURO']
+}
+df = pd.DataFrame(data)
+
+#визуализация
+#гистограмма
+plt.figure(figsize=(8, 5))
+sns.histplot(df['hale_2019'], bins=8, kde=False, edgecolor='black', color='steelblue')
+plt.xlabel('Ожидаемая продолжительность здоровой жизни, лет')
+plt.ylabel('Количество стран')
+plt.title('Рис. 1 – Распределение показателя HALE по 30 странам (2019)')
+plt.grid(axis='y', alpha=0.3)
+plt.tight_layout()
+plt.savefig('fig1_hist_hale.png', dpi=300)
+plt.close()
+
+#диаграмма рассеяния
+plt.figure(figsize=(8, 5))
+plt.scatter(df['health_exp'], df['hale_2019'], alpha=0.7, edgecolors='black', s=60, color='darkgreen')
+plt.xlabel('Расходы на здравоохранение на душу населения, USD')
+plt.ylabel('HALE, лет')
+plt.title('Рис. 2 – Зависимость HALE от расходов на здравоохранение')
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.savefig('fig2_scatter_hale_exp.png', dpi=300)
+plt.close()
+
+#boxplot по регионам
+plt.figure(figsize=(10, 6))
+region_order = ['EURO', 'WPRO', 'AMRO', 'EMRO']
+sns.boxplot(x='region', y='hale_2019', data=df, order=region_order,
+            palette='Set2', showmeans=True, meanprops={"marker":"o", "markerfacecolor":"white", "markeredgecolor":"black"})
+plt.xlabel('Регион ВОЗ')
+plt.ylabel('HALE, лет')
+plt.title('Рис. 3 – Распределение HALE по регионам ВОЗ (2019)')
+plt.xticks(ticks=range(4), labels=['Европа', 'Зап. Тихий океан', 'Америка', 'Вост. Средиземноморье'], rotation=15)
+plt.tight_layout()
+plt.savefig('fig3_boxplot_regions.png', dpi=300)
+plt.close()
+
+#применение методов
+#Шапиро
+print("\nШапиро")
+print("H_0= {f(x)=N(a,σ^2)} | H_1= {f(x)≠N(a,σ^2)}")
+stat_sw, p_sw = shapiro(df['hale_2019'].values)
+print(f"statistic = {stat_sw:.4f}, p-value = {p_sw:.4f}")
+print(f"Вывод (α=0.05): {'отвергаем H0' if p_sw < 0.05 else 'не отвергаем H0'}")
+
+#Спирмен
+print("\nСпирмен")
+print("H_0= {p_s=0} | H_1= {p_s≠0}")
+rho, p_sp = spearmanr(df['hale_2019'], df['health_exp'], alternative='two-sided')
+print(f"ρ = {rho:.4f}, p-value = {p_sp:.4f}")
+strength = "сильная" if abs(rho) >= 0.7 else "умеренная" if abs(rho) >= 0.4 else "слабая"
+print(f"связь: {strength} {'положительная' if rho > 0 else 'отрицательная'} монотонная")
+print(f"вывод (α=0.05): {'связь статистически значима' if p_sp < 0.05 else 'связь не значима'}")
+
+#Манна-Уитни
+print("\nМанна-Уитни (Европа и др)")
+print("H_0= {F_EURO (x)= F_y (x)} | H_1= {F_EURO (x)≠ F_y (x)}")
+x_euro = df[df['region']=='EURO']['hale_2019'].values
+x_other = df[df['region']!='EURO']['hale_2019'].values
+stat_u, p_u = mannwhitneyu(x_euro, x_other, use_continuity=True, alternative='two-sided')
+print(f"U = {stat_u:.2f}, p-value = {p_u:.4f}")
+print(f"медианы: EURO={np.median(x_euro):.2f}, остальные={np.median(x_other):.2f}")
+print(f"вывод (α=0.05): {'распределения отличаются' if p_u < 0.05 else 'нет оснований считать распределения различными'}")
+
+#Краскел-Уоллис
+print("\nУоллис")
+print("H_0= {F_1 (x)= F_2 (x)=⋯=F_k (x)} | H_1= {хотя бы одно распределение отличается}")
+samples = [df[df['region']==r]['hale_2019'].values for r in ['EURO','WPRO','AMRO','EMRO'] if len(df[df['region']==r])>0]
+stat_kw, p_kw = kruskal(*samples)
+print(f"H = {stat_kw:.4f}, p-value = {p_kw:.4f}")
+print(f"вывод (α=0.05): {'как минимум один регион отличается' if p_kw < 0.05 else 'нет оснований отвергнуть H0'}")
+
+#Кендалл
+print("\nКендалл")
+print("H0: τ = 0 | H1: τ ≠ 0")
+tau, p_kendall = kendalltau(df['hale_2019'], df['health_exp'], alternative='two-sided')
+print(f"τ = {tau:.4f}, p-value = {p_kendall:.4f}")
+print(f"вывод (α=0.05): {'связь значима' if p_kendall < 0.05 else 'связь не значима'}")
+
+
+#Медианный критерий
+print("\nМедианы")
+print("H0: med_EURO = med_WPRO = med_AMRO = med_EMRO")
+print("H1: хотя бы одна медиана отличается")
+stat_med, p_med, median_val, table = median_test(*samples, ties='below')
+print(f"общая медиана: {median_val:.2f} лет")
+print(f"статистика χ^2 = {stat_med:.4f}, p-value = {p_med:.4f}")
+print(f"вывод (α=0.05): {'медианы различны' if p_med < 0.05 else 'медианы статистически равны'}")
